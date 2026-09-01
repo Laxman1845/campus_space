@@ -1,0 +1,10 @@
+﻿node_modules/
+dist/
+.venv/
+backend/__pycache__/
+**/__pycache__/
+*.pyc
+.gradle/
+.env
+.env.*
+!.env.example
