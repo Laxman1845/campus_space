@@ -224,7 +224,7 @@ export default function CampusSpace() {
 
   const floorList = useMemo(() => {
     const count = selectedBuilding?.floors ?? 4;
-    return Array.from({ length: count }, (_, i) => i + 1); // 1..count
+    return [0, ...Array.from({ length: count }, (_, i) => i + 1)];
   }, [selectedBuilding]);
 
   const loadFreeRooms = useCallback(async (buildingId, floorNum) => {
