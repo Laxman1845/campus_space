@@ -1,4 +1,4 @@
-from sqlalchemy import Column, DateTime, Float, Integer, String
+from sqlalchemy import Column, Float, Integer, String, Time
 from sqlalchemy.orm import declarative_base
 
 Base = declarative_base()
@@ -11,8 +11,8 @@ class Free_slot(Base):
     building = Column(String(50), nullable=False)
     room = Column(String(50), nullable=False)
     floor = Column(Integer, nullable=False, default=1)
-    start_time = Column(DateTime, nullable=False)
-    end_time = Column(DateTime, nullable=False)
+    start_time = Column(Time, nullable=False)
+    end_time = Column(Time, nullable=False)
 
 
 class Building(Base):

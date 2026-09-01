@@ -2,6 +2,7 @@ from datetime import datetime
 from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 try:
@@ -14,11 +15,17 @@ except ImportError:
 app = FastAPI()
 app.add_middleware(
    CORSMiddleware,
+   allow_origin_regex=r"http://(localhost|127\.0\.0\.1):\d+",
    allow_origins=[
       "http://localhost:5173",
       "http://127.0.0.1:5173",
+      "http://localhost:5174",
+      "http://127.0.0.1:5174",
+      "http://localhost:5175",
+      "http://127.0.0.1:5175",
       "capacitor://localhost",
       "http://localhost",
+      "http://127.0.0.1",
    ],
    allow_credentials=True,
    allow_methods=["*"],
@@ -40,12 +47,13 @@ class FreeSlotCreate(BaseModel):
 def get_tables(
    building: str | None = None,
    floor: int | None = None,
+   time: str | None = None,
    db: Session = Depends(get_db),
 ):
-   now = datetime.now()
+   current_time = time or datetime.now().strftime("%H:%M:%S")
    query = db.query(tables.Free_slot).filter(
-      tables.Free_slot.start_time <= now,
-      tables.Free_slot.end_time >= now,
+      func.to_char(tables.Free_slot.start_time, "HH24:MI:SS") <= current_time,
+      func.to_char(tables.Free_slot.end_time, "HH24:MI:SS") >= current_time,
    )
    if building is not None:
       query = query.filter(tables.Free_slot.building == building)

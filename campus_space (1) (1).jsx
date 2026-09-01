@@ -14,30 +14,34 @@ const BUILDINGS = [
   { id: 17, name: "AB2", label: "Academic Block 2", floors: 4 },
 ];
 
-const MOCK_FREE_ROOMS = [
-  { id: "m1", room_number: "104", floor: 1, capacity: 40, free_from: "10:00", free_to: "11:40" },
-  { id: "m2", room_number: "108", floor: 1, capacity: 60, free_from: "09:30", free_to: "10:20" },
-  { id: "m3", room_number: "211", floor: 2, capacity: 30, free_from: "10:10", free_to: "12:00" },
-  { id: "m4", room_number: "304", floor: 3, capacity: 50, free_from: "09:00", free_to: "10:30" },
-  { id: "m5", room_number: "002", floor: 1, capacity: 80, free_from: "10:00", free_to: "13:00" },
-];
-
 // ─── API FUNCTIONS ────────────────────────────────────────
 async function fetchFreeRooms(buildingId, floor) {
   const building = BUILDINGS.find((b) => b.id === buildingId);
+  const now = new Date();
+  const timeValue = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}:00`;
   const res = await fetch(
-    `${API_BASE}/tables?building=${encodeURIComponent(building?.name ?? "")}&floor=${floor}`
+    `${API_BASE}/tables?building=${encodeURIComponent(building?.name ?? "")}&floor=${floor}&time=${encodeURIComponent(timeValue)}`
   );
   if (!res.ok) throw new Error("Could not fetch free rooms");
   const tables = await res.json();
-  return tables.map((table) => ({
-    id: table.id,
-    room_number: table.room,
-    floor: table.floor,
-    capacity: table.capacity ?? 0,
-    free_from: new Date(table.start_time).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-    free_to: new Date(table.end_time).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-  }));
+  return tables.map((table) => {
+    const start = table.start_time ?? "00:00:00";
+    const end = table.end_time ?? "00:00:00";
+    const formatTime = (value) => {
+      if (!value) return "00:00";
+      const [hour = "00", minute = "00"] = String(value).split(":");
+      return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+    };
+
+    return {
+      id: table.id,
+      room_number: table.room,
+      floor: table.floor,
+      capacity: table.capacity ?? 0,
+      free_from: formatTime(start),
+      free_to: formatTime(end),
+    };
+  });
 }
 
 // ─── DESIGN TOKENS ────────────────────────────────────────
@@ -227,17 +231,12 @@ export default function CampusSpace() {
     setRoomsLoading(true);
     setRoomsError(null);
     try {
-      let rooms;
-      try {
-        rooms = await fetchFreeRooms(buildingId, floorNum);
-      } catch {
-        rooms = MOCK_FREE_ROOMS.filter((r) => r.floor === floorNum);
-      }
+      const rooms = await fetchFreeRooms(buildingId, floorNum);
       setFreeRooms(rooms);
       setLastUpdated(new Date());
     } catch {
       setFreeRooms([]);
-      setRoomsError("Couldn't load free rooms. Try refreshing.");
+      setRoomsError("Couldn't load free rooms. Check the backend connection and try refreshing.");
     } finally {
       setRoomsLoading(false);
     }
