@@ -43,6 +43,30 @@ npm run dev
 
 Open the Vite URL shown in the terminal, usually `http://localhost:5173`.
 
+## Deploy
+
+### Backend on Render
+
+Create a Render PostgreSQL database, then create a Web Service from this repository.
+Render can use `render.yaml`, or configure these values manually:
+
+- Build command: `pip install -r requirements.txt`
+- Start command: `uvicorn backend.main:app --host 0.0.0.0 --port $PORT`
+- `DATABASE_URL`: the internal connection URL from Render PostgreSQL
+- `FRONTEND_URL`: the deployed Vercel URL, for example `https://campus-space.vercel.app` (the backend also permits Vercel preview URLs)
+
+### Frontend on Vercel
+
+Import the repository as a Vercel project. Use the default Vite settings:
+
+- Build command: `npm run build`
+- Output directory: `dist`
+- `VITE_API_BASE`: the Render backend URL, for example `https://campus-space-api.onrender.com`
+
+Redeploy the frontend after setting `VITE_API_BASE`, since Vite embeds `VITE_*` values during the build.
+
+Test the deployed backend before connecting the frontend by opening `https://<your-render-service>.onrender.com/health`; it should return `{"status":"ok"}`.
+
 ## Configuration
 
 `VITE_API_BASE` controls the backend URL used by the frontend:

@@ -5,7 +5,7 @@ import {
 } from "lucide-react";
 
 // ─── CONFIG ───────────────────────────────────────────────
-const API_BASE = import.meta.env.VITE_API_BASE ?? "http://127.0.0.1:8000";
+const API_BASE = (import.meta.env.VITE_API_BASE ?? "http://127.0.0.1:8000").replace(/\/$/, "");
 
 // ─── STATIC CAMPUS DATA ───────────────────────────────────
 const BUILDINGS = [
@@ -22,7 +22,9 @@ async function fetchFreeRooms(buildingId, floor) {
   const res = await fetch(
     `${API_BASE}/tables?building=${encodeURIComponent(building?.name ?? "")}&floor=${floor}&time=${encodeURIComponent(timeValue)}`
   );
-  if (!res.ok) throw new Error("Could not fetch free rooms");
+  if (!res.ok) {
+    throw new Error(`Backend returned HTTP ${res.status}`);
+  }
   const tables = await res.json();
   return tables.map((table) => {
     const start = table.start_time ?? "00:00:00";
@@ -234,9 +236,9 @@ export default function CampusSpace() {
       const rooms = await fetchFreeRooms(buildingId, floorNum);
       setFreeRooms(rooms);
       setLastUpdated(new Date());
-    } catch {
+    } catch (error) {
       setFreeRooms([]);
-      setRoomsError("Couldn't load free rooms. Check the backend connection and try refreshing.");
+      setRoomsError(`${error instanceof Error ? error.message : "Request failed"}. Check the backend URL and try refreshing.`);
     } finally {
       setRoomsLoading(false);
     }

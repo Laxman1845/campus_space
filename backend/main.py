@@ -1,3 +1,4 @@
+import os
 from datetime import datetime
 from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -13,20 +14,25 @@ except ImportError:
    from database import engine, get_db
 
 app = FastAPI()
+frontend_url = os.getenv("FRONTEND_URL")
+allowed_origins = [
+   "http://localhost:5173",
+   "http://127.0.0.1:5173",
+   "http://localhost:5174",
+   "http://127.0.0.1:5174",
+   "http://localhost:5175",
+   "http://127.0.0.1:5175",
+   "capacitor://localhost",
+   "http://localhost",
+   "http://127.0.0.1",
+]
+if frontend_url:
+   allowed_origins.append(frontend_url.rstrip("/"))
+
 app.add_middleware(
    CORSMiddleware,
-   allow_origin_regex=r"http://(localhost|127\.0\.0\.1):\d+",
-   allow_origins=[
-      "http://localhost:5173",
-      "http://127.0.0.1:5173",
-      "http://localhost:5174",
-      "http://127.0.0.1:5174",
-      "http://localhost:5175",
-      "http://127.0.0.1:5175",
-      "capacitor://localhost",
-      "http://localhost",
-      "http://127.0.0.1",
-   ],
+   allow_origin_regex=r"(http://(localhost|127\.0\.0\.1):\d+|https://[a-zA-Z0-9-]+\.vercel\.app)",
+   allow_origins=allowed_origins,
    allow_credentials=True,
    allow_methods=["*"],
    allow_headers=["*"],
@@ -41,6 +47,16 @@ class FreeSlotCreate(BaseModel):
    floor: int
    start_time: datetime
    end_time: datetime
+
+
+@app.get("/health")
+def health_check():
+   return {"status": "ok"}
+
+
+@app.get("/")
+def root():
+   return {"status": "ok", "service": "campus-space-api"}
 
 
 @app.get("/tables")
