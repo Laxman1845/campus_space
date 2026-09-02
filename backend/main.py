@@ -1,9 +1,8 @@
 import os
 from datetime import datetime
-from fastapi import Depends, FastAPI
+from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 try:
@@ -47,6 +46,7 @@ class FreeSlotCreate(BaseModel):
    floor: int
    start_time: datetime
    end_time: datetime
+   day: str
 
 
 @app.get("/health")
@@ -64,18 +64,29 @@ def get_tables(
    building: str | None = None,
    floor: int | None = None,
    time: str | None = None,
+   day: str | None = None,
    db: Session = Depends(get_db),
 ):
    current_time = time or datetime.now().strftime("%H:%M:%S")
+   try:
+      requested_time = datetime.strptime(current_time, "%H:%M:%S").time()
+   except ValueError as error:
+      raise HTTPException(status_code=400, detail="time must use HH:MM:SS format") from error
    query = db.query(tables.Free_slot).filter(
-      func.to_char(tables.Free_slot.start_time, "HH24:MI:SS") <= current_time,
-      func.to_char(tables.Free_slot.end_time, "HH24:MI:SS") >= current_time,
+      tables.Free_slot.start_time <= requested_time,
+      tables.Free_slot.end_time >= requested_time,
    )
    if building is not None:
       query = query.filter(tables.Free_slot.building == building)
    if floor is not None:
       query = query.filter(tables.Free_slot.floor == floor)
-   return query.all()
+   if day is not None:
+      query = query.filter(tables.Free_slot.day == day)
+   unique_rooms = {}
+   for table in query.order_by(tables.Free_slot.id).all():
+      room_key = (table.building, table.floor, table.room)
+      unique_rooms.setdefault(room_key, table)
+   return list(unique_rooms.values())
 
 
 

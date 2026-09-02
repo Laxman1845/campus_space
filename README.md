@@ -6,7 +6,7 @@ Campus Space helps students find currently available rooms by selecting a buildi
 
 - Node.js and npm
 - Python 3.11+
-- PostgreSQL
+- A PostgreSQL database
 
 ## Setup
 
@@ -25,14 +25,16 @@ Create and activate the virtual environment, then install Python dependencies:
 python -m pip install -r requirements.txt
 ```
 
-Copy `.env.example` to `.env` and update the PostgreSQL connection values.
+Copy `.env.example` to `.env` and set `DATABASE_URL` to your PostgreSQL connection string.
+
+Make sure PostgreSQL is running before starting the API. The frontend cannot connect directly to PostgreSQL; it connects to FastAPI on port `8000`.
 
 ## Run Locally
 
 Start the backend from the project root:
 
 ```powershell
-.\.venv\Scripts\python.exe -m uvicorn backend.main:app --reload
+npm run dev:backend
 ```
 
 Start the frontend in a second terminal:
@@ -41,19 +43,20 @@ Start the frontend in a second terminal:
 npm run dev
 ```
 
+Keep both terminals running. If the frontend shows `Failed to fetch`, open `http://127.0.0.1:8000/health`; it must return `{"status":"ok"}`. That error means the API is stopped, the API URL is wrong, or the browser is blocked from reaching the API.
+
 Open the Vite URL shown in the terminal, usually `http://localhost:5173`.
 
 ## Deploy
 
 ### Backend on Render
 
-Create a Render PostgreSQL database, then create a Web Service from this repository.
-Render can use `render.yaml`, or configure these values manually:
+Create a Render Web Service from this repository. Configure these values manually or use `render.yaml`:
 
 - Build command: `pip install -r requirements.txt`
 - Start command: `uvicorn backend.main:app --host 0.0.0.0 --port $PORT`
-- `DATABASE_URL`: the internal connection URL from Render PostgreSQL
 - `FRONTEND_URL`: the deployed Vercel URL, for example `https://campus-space.vercel.app` (the backend also permits Vercel preview URLs)
+- `DATABASE_URL`: the PostgreSQL connection string
 
 ### Frontend on Vercel
 
@@ -75,22 +78,20 @@ Test the deployed backend before connecting the frontend by opening `https://<yo
 VITE_API_BASE=http://127.0.0.1:8000
 ```
 
-The backend reads `DATABASE_URL`, or these PostgreSQL variables when it is not set:
+The backend uses PostgreSQL through SQLAlchemy. Configure either a complete connection string:
 
 ```env
-POSTGRES_USER=postgres
-POSTGRES_PASSWORD=your_password
-POSTGRES_HOST=localhost
-POSTGRES_PORT=5432
-POSTGRES_DB=campusspace
+DATABASE_URL=postgresql+psycopg2://postgres:password@localhost:5432/campusspace
 ```
+
+Or configure `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_HOST`, `POSTGRES_PORT`, and `POSTGRES_DB` individually.
 
 ## API
 
 The frontend uses these backend endpoints:
 
-- `GET /tables?building={name}&floor={number}`: list rooms available now
-- `POST /tables`: create a free-room time slot
+- `GET /tables?building={name}&floor={number}&time={HH:MM:SS}&day={weekday}`: list rooms available for the requested day and time
+- `POST /tables`: create a free-room time slot including its weekday in `day`
 
 Location detection and backend floor discovery are not part of the current implementation. Buildings and floor options are selected from the frontend's local campus data.
 

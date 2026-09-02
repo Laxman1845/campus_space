@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import {
   MapPin, Navigation, RefreshCw, Layers, DoorOpen,
-  AlertTriangle, Users, Compass, ChevronDown
+  AlertTriangle, Compass, ChevronDown
 } from "lucide-react";
 
 // ─── CONFIG ───────────────────────────────────────────────
@@ -9,9 +9,7 @@ const API_BASE = (import.meta.env.VITE_API_BASE ?? "http://127.0.0.1:8000").repl
 
 // ─── STATIC CAMPUS DATA ───────────────────────────────────
 const BUILDINGS = [
-  { id: 1, name: "AB1", label: "Academic Block 1", floors: 4 },
   { id: 2, name: "CB", label: "Central Block", floors: 10 },
-  { id: 17, name: "AB2", label: "Academic Block 2", floors: 4 },
 ];
 
 // ─── API FUNCTIONS ────────────────────────────────────────
@@ -19,8 +17,9 @@ async function fetchFreeRooms(buildingId, floor) {
   const building = BUILDINGS.find((b) => b.id === buildingId);
   const now = new Date();
   const timeValue = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}:00`;
+  const dayValue = now.toLocaleDateString("en-US", { weekday: "long" });
   const res = await fetch(
-    `${API_BASE}/tables?building=${encodeURIComponent(building?.name ?? "")}&floor=${floor}&time=${encodeURIComponent(timeValue)}`
+    `${API_BASE}/tables?building=${encodeURIComponent(building?.name ?? "")}&floor=${floor}&time=${encodeURIComponent(timeValue)}&day=${encodeURIComponent(dayValue)}`
   );
   if (!res.ok) {
     throw new Error(`Backend returned HTTP ${res.status}`);
@@ -153,12 +152,6 @@ function RoomRow({ room, index }) {
             color: C.white, letterSpacing: "0.02em",
           }}>
             {room.room_number}
-          </span>
-          <span style={{
-            fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: C.mist,
-            display: "inline-flex", alignItems: "center", gap: 4,
-          }}>
-            <Users size={11} /> {room.capacity || "—"}
           </span>
         </div>
         <div style={{
