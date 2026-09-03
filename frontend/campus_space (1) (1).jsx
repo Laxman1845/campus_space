@@ -8,8 +8,8 @@ import {
 const configuredApiBase = import.meta.env.VITE_API_BASE?.trim();
 const API_BASE = (
   import.meta.env.PROD && configuredApiBase?.match(/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i)
-    ? "https://campus-space-4.onrender.com"
-    : configuredApiBase ?? (import.meta.env.PROD ? "https://campus-space-4.onrender.com" : "http://127.0.0.1:8000")
+    ? "https://campus-space-7.onrender.com"
+    : configuredApiBase ?? (import.meta.env.PROD ? "https://campus-space-7.onrender.com" : "http://127.0.0.1:8000")
 ).replace(/\/$/, "");
 
 // ─── STATIC CAMPUS DATA ───────────────────────────────────
