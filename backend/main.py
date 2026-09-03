@@ -3,14 +3,12 @@ from datetime import datetime
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from sqlalchemy.orm import Session
+from pymongo.errors import PyMongoError
 
 try:
-   from . import tables
-   from .database import engine, get_db
+   from .database import client, free_slots, get_db
 except ImportError:
-   import tables
-   from database import engine, get_db
+   from database import client, free_slots, get_db
 
 app = FastAPI()
 frontend_url = os.getenv("FRONTEND_URL")
@@ -37,9 +35,6 @@ app.add_middleware(
    allow_headers=["*"],
 )
 
-tables.Base.metadata.create_all(bind=engine)
-
-
 class FreeSlotCreate(BaseModel):
    building: str
    room: str
@@ -51,6 +46,10 @@ class FreeSlotCreate(BaseModel):
 
 @app.get("/health")
 def health_check():
+   try:
+      client.admin.command("ping")
+   except PyMongoError as error:
+      raise HTTPException(status_code=503, detail="Database unavailable") from error
    return {"status": "ok"}
 
 
@@ -65,35 +64,43 @@ def get_tables(
    floor: int | None = None,
    time: str | None = None,
    day: str | None = None,
-   db: Session = Depends(get_db),
+   db = Depends(get_db),
 ):
    current_time = time or datetime.now().strftime("%H:%M:%S")
    try:
       requested_time = datetime.strptime(current_time, "%H:%M:%S").time()
    except ValueError as error:
       raise HTTPException(status_code=400, detail="time must use HH:MM:SS format") from error
-   query = db.query(tables.Free_slot).filter(
-      tables.Free_slot.start_time <= requested_time,
-      tables.Free_slot.end_time >= requested_time,
-   )
+   filters = {
+      "start_time": {"$lte": requested_time.strftime("%H:%M:%S")},
+      "end_time": {"$gte": requested_time.strftime("%H:%M:%S")},
+   }
    if building is not None:
-      query = query.filter(tables.Free_slot.building == building)
+      filters["building"] = building
    if floor is not None:
-      query = query.filter(tables.Free_slot.floor == floor)
+      filters["floor"] = floor
    if day is not None:
-      query = query.filter(tables.Free_slot.day == day)
+      filters["day"] = day
    unique_rooms = {}
-   for table in query.order_by(tables.Free_slot.id).all():
-      room_key = (table.building, table.floor, table.room)
-      unique_rooms.setdefault(room_key, table)
+   try:
+      for table in free_slots.find(filters).sort("_id", 1):
+         table["id"] = str(table.pop("_id"))
+         room_key = (table["building"], table["floor"], table["room"])
+         unique_rooms.setdefault(room_key, table)
+   except PyMongoError as error:
+      raise HTTPException(status_code=503, detail="Database unavailable") from error
    return list(unique_rooms.values())
 
 
 
 @app.post("/tables")
-def create_table(free_slot: FreeSlotCreate, db: Session = Depends(get_db)):
-   table = tables.Free_slot(**free_slot.model_dump())
-   db.add(table)
-   db.commit()
-   db.refresh(table)
-   return table
+def create_table(free_slot: FreeSlotCreate, db=Depends(get_db)):
+   data = free_slot.model_dump()
+   data["start_time"] = data["start_time"].time().isoformat()
+   data["end_time"] = data["end_time"].time().isoformat()
+   try:
+      result = free_slots.insert_one(data)
+      data["id"] = str(result.inserted_id)
+   except PyMongoError as error:
+      raise HTTPException(status_code=503, detail="Database unavailable") from error
+   return data
