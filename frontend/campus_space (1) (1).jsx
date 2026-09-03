@@ -5,7 +5,12 @@ import {
 } from "lucide-react";
 
 // ─── CONFIG ───────────────────────────────────────────────
-const API_BASE = (import.meta.env.VITE_API_BASE ?? "http://127.0.0.1:8000").replace(/\/$/, "");
+const configuredApiBase = import.meta.env.VITE_API_BASE?.trim();
+const API_BASE = (
+  import.meta.env.PROD && configuredApiBase?.match(/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i)
+    ? "https://campus-space-4.onrender.com"
+    : configuredApiBase ?? (import.meta.env.PROD ? "https://campus-space-4.onrender.com" : "http://127.0.0.1:8000")
+).replace(/\/$/, "");
 
 // ─── STATIC CAMPUS DATA ───────────────────────────────────
 const BUILDINGS = [
@@ -23,6 +28,10 @@ async function fetchFreeRooms(buildingId, floor) {
   );
   if (!res.ok) {
     throw new Error(`Backend returned HTTP ${res.status}`);
+  }
+  const contentType = res.headers.get("content-type") ?? "";
+  if (!contentType.includes("application/json")) {
+    throw new Error("Backend returned HTML instead of JSON. Check the Render API URL.");
   }
   const tables = await res.json();
   return tables.map((table) => {
