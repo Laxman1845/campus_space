@@ -490,6 +490,9 @@ export default function CampusSpace() {
           animation: "fadeIn 0.5s ease 0.3s both",
         }}>
           CAMPUS SPACE · VIT-AP UNIVERSITY
+          <div style={{ marginTop: 6, fontSize: 10, color: `${C.mist}65`, letterSpacing: "0.05em" }}>
+            DEVELOPED BY A.LAXMAN
+          </div>
         </div>
       </div>
     </div>
